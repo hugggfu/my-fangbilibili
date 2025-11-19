@@ -1,0 +1,49 @@
+server:
+  port: 7070
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 15MB
+  application:
+    name: easylive-admin
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:3306/easylive
+    username: ${DB_USERNAME:your-username}
+    password: ${DB_PASSWORD:your-password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: HikariCPDatasource
+      minimum-idle: 5
+      idle-timeout: 180000
+      maximum-pool-size: 10
+      auto-commit: true
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      connection-test-query: SELECT 1
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: 0
+#mybatis 大小写转驼峰
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+
+project:
+  folder: c:/webser/easylive/
+log:
+  root:
+    level: debug
+admin:
+  account: admin
+  password: admin123
+
+# 阿里云OSS配置
+aliyun:
+ oss:
+  endPoint: oss-cn-beijing.aliyuncs.com
+  bucketName: your-bucket-name
+  accessKeyId: ${OSS_ACCESS_KEY_ID:your-access-key-id}
+  accessKeySecret: ${OSS_ACCESS_KEY_SECRET:your-access-key-secret}
