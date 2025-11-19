@@ -280,7 +280,7 @@
         ifnull(sum(collect_count),0) collectCount
         from video_info
         <where>
-            <if test="userId!=null">
+            <if test="userId != null">
                 and user_id = #{userId}
             </if>
         </where>
