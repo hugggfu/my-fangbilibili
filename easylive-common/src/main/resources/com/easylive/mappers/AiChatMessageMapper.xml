@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easylive.mappers.AiChatMessageMapper">
+
+	<!--实体映射-->
+	<resultMap id="base_result_map" type="com.easylive.entity.po.AiChatMessage">
+		<!--消息ID-->
+		<id column="message_id" property="messageId"  />
+		<!--所属会话ID-->
+		<result column="session_id" property="sessionId"  />
+		<!--角色: user-用户, assistant-AI, system-系统-->
+		<result column="role" property="role"  />
+		<!--消息内容-->
+		<result column="content" property="content"  />
+		<!--扩展数据(JSON格式): 推荐视频列表、Token消耗等-->
+		<result column="extra_data" property="extraData"  />
+		<!--发送时间-->
+		<result column="create_time" property="createTime"  />
+	</resultMap>
+
+
+	<!-- 通用查询结果列-->
+	<sql id="base_column_list">
+		 a.message_id,a.session_id,a.role,a.content,a.extra_data,
+		 a.create_time
+	</sql>
+
+	<sql id="base_condition_filed">
+			<if test="query.messageId != null">
+				 and  a.message_id = #{query.messageId}
+			</if>
+			<if test="query.sessionId != null">
+				 and  a.session_id = #{query.sessionId}
+			</if>
+			<if test="query.role != null and query.role!=''">
+				 and  a.role = #{query.role}
+			</if>
+			<if test="query.content != null and query.content!=''">
+				 and  a.content = #{query.content}
+			</if>
+			<if test="query.extraData != null and query.extraData!=''">
+				 and  a.extra_data = #{query.extraData}
+			</if>
+			<if test="query.createTime != null and query.createTime!=''">
+				 <![CDATA[ and  a.create_time=str_to_date(#{query.createTime}, '%Y-%m-%d') ]]>
+			</if>
+	</sql>
+	<!-- 通用条件列-->
+	<sql id="base_condition">
+	 <where>
+		 <include refid="base_condition_filed" />
+	 </where>
+	</sql>
+
+	<!-- 通用查询条件列-->
+	<sql id="query_condition">
+	 <where>
+			<include refid="base_condition_filed" />
+			<if test="query.roleFuzzy!= null  and query.roleFuzzy!=''">
+				 and  a.role like concat('%', #{query.roleFuzzy}, '%')
+			</if>
+			<if test="query.contentFuzzy!= null  and query.contentFuzzy!=''">
+				 and  a.content like concat('%', #{query.contentFuzzy}, '%')
+			</if>
+			<if test="query.extraDataFuzzy!= null  and query.extraDataFuzzy!=''">
+				 and  a.extra_data like concat('%', #{query.extraDataFuzzy}, '%')
+			</if>
+			<if test="query.createTimeStart!= null and query.createTimeStart!=''">
+				 <![CDATA[ and  a.create_time>=str_to_date(#{query.createTimeStart}, '%Y-%m-%d') ]]>
+			</if>
+			<if test="query.createTimeEnd!= null and query.createTimeEnd!=''">
+				 <![CDATA[ and  a.create_time< date_sub(str_to_date(#{query.createTimeEnd},'%Y-%m-%d'),interval -1 day) ]]>
+			</if>
+	 </where>
+	</sql>
+
+	<!-- 查询集合-->
+	<select id="selectList" resultMap="base_result_map" >
+		 SELECT <include refid="base_column_list" /> FROM ai_chat_message a <include refid="query_condition" />
+		 <if test="query.orderBy!=null">
+			 order by ${query.orderBy}
+		 </if>
+		 <if test="query.simplePage!=null">
+			 limit #{query.simplePage.start},#{query.simplePage.end}
+		 </if>
+	</select>
+
+	<!-- 查询数量-->
+	<select id="selectCount" resultType="java.lang.Integer" >
+		 SELECT count(1) FROM ai_chat_message a <include refid="query_condition" />
+	</select>
+
+	<!-- 插入 （匹配有值的字段）-->
+	<insert id="insert" parameterType="com.easylive.entity.po.AiChatMessage">
+		<selectKey keyProperty="bean.messageId" resultType="Long" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+		 INSERT INTO ai_chat_message
+		 <trim prefix="(" suffix=")" suffixOverrides="," >
+			<if test="bean.sessionId != null">
+				 session_id,
+			</if>
+			<if test="bean.role != null">
+				 role,
+			</if>
+			<if test="bean.content != null">
+				 content,
+			</if>
+			<if test="bean.extraData != null">
+				 extra_data,
+			</if>
+			<if test="bean.createTime != null">
+				 create_time,
+			</if>
+		 </trim>
+		 <trim prefix="values (" suffix=")" suffixOverrides="," >
+			<if test="bean.sessionId!=null">
+				 #{bean.sessionId},
+			</if>
+			<if test="bean.role!=null">
+				 #{bean.role},
+			</if>
+			<if test="bean.content!=null">
+				 #{bean.content},
+			</if>
+			<if test="bean.extraData!=null">
+				 #{bean.extraData},
+			</if>
+			<if test="bean.createTime!=null">
+				 #{bean.createTime},
+			</if>
+		 </trim>
+	</insert>
+
+	<!-- 插入或者更新 （匹配有值的字段）-->
+	<insert id="insertOrUpdate" parameterType="com.easylive.entity.po.AiChatMessage">
+		 INSERT INTO ai_chat_message
+		 <trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="bean.messageId != null">
+				 message_id,
+			</if>
+			<if test="bean.sessionId != null">
+				 session_id,
+			</if>
+			<if test="bean.role != null">
+				 role,
+			</if>
+			<if test="bean.content != null">
+				 content,
+			</if>
+			<if test="bean.extraData != null">
+				 extra_data,
+			</if>
+			<if test="bean.createTime != null">
+				 create_time,
+			</if>
+		 </trim>
+		 <trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="bean.messageId!=null">
+				 #{bean.messageId},
+			</if>
+			<if test="bean.sessionId!=null">
+				 #{bean.sessionId},
+			</if>
+			<if test="bean.role!=null">
+				 #{bean.role},
+			</if>
+			<if test="bean.content!=null">
+				 #{bean.content},
+			</if>
+			<if test="bean.extraData!=null">
+				 #{bean.extraData},
+			</if>
+			<if test="bean.createTime!=null">
+				 #{bean.createTime},
+			</if>
+		 </trim>
+		 on DUPLICATE key update 
+		 <trim prefix="" suffix="" suffixOverrides=",">
+			<if test="bean.sessionId!=null">
+				 session_id = VALUES(session_id),
+			</if>
+			<if test="bean.role!=null">
+				 role = VALUES(role),
+			</if>
+			<if test="bean.content!=null">
+				 content = VALUES(content),
+			</if>
+			<if test="bean.extraData!=null">
+				 extra_data = VALUES(extra_data),
+			</if>
+			<if test="bean.createTime!=null">
+				 create_time = VALUES(create_time),
+			</if>
+		 </trim>
+	</insert>
+
+	<!-- 添加 （批量插入）-->
+	<insert id="insertBatch" parameterType="com.easylive.entity.po.AiChatMessage" useGeneratedKeys="true" keyProperty="messageId">
+		 INSERT INTO ai_chat_message(
+			 session_id,
+			 role,
+			 content,
+			 extra_data,
+			 create_time
+		 )values
+		 <foreach collection="list" item="item" separator=",">
+			 (
+				 #{item.sessionId},
+				 #{item.role},
+				 #{item.content},
+				 #{item.extraData},
+				 #{item.createTime}
+			 )
+		 </foreach>
+	</insert>
+
+	<!-- 批量新增修改 （批量插入）-->
+	<insert id="insertOrUpdateBatch" parameterType="com.easylive.entity.po.AiChatMessage">
+		 INSERT INTO ai_chat_message(
+			 session_id,
+			 role,
+			 content,
+			 extra_data,
+			 create_time
+		 )values
+		 <foreach collection="list" item="item" separator=",">
+			 (
+				 #{item.sessionId},
+				 #{item.role},
+				 #{item.content},
+				 #{item.extraData},
+				 #{item.createTime}
+			 )
+		 </foreach>
+			on DUPLICATE key update 
+			session_id = VALUES(session_id),
+			role = VALUES(role),
+			content = VALUES(content),
+			extra_data = VALUES(extra_data),
+			create_time = VALUES(create_time)
+	</insert>
+
+	<!--多条件修改-->
+	<update id="updateByParam" parameterType="com.easylive.entity.query.AiChatMessageQuery">
+		 UPDATE ai_chat_message a
+ 		 <set> 
+			<if test="bean.sessionId != null">
+				 session_id = #{bean.sessionId},
+			</if>
+			<if test="bean.role != null">
+				 role = #{bean.role},
+			</if>
+			<if test="bean.content != null">
+				 content = #{bean.content},
+			</if>
+			<if test="bean.extraData != null">
+				 extra_data = #{bean.extraData},
+			</if>
+			<if test="bean.createTime != null">
+				 create_time = #{bean.createTime},
+			</if>
+ 		 </set>
+ 		 <include refid="query_condition" />
+	</update>
+
+	<!--多条件删除-->
+	<delete id="deleteByParam">
+		 delete a from ai_chat_message a
+ 		 <include refid="query_condition" />
+	</delete>
+
+	<!-- 根据MessageId修改-->
+	<update id="updateByMessageId" parameterType="com.easylive.entity.po.AiChatMessage">
+		 UPDATE ai_chat_message
+ 		 <set> 
+			<if test="bean.sessionId != null">
+				 session_id = #{bean.sessionId},
+			</if>
+			<if test="bean.role != null">
+				 role = #{bean.role},
+			</if>
+			<if test="bean.content != null">
+				 content = #{bean.content},
+			</if>
+			<if test="bean.extraData != null">
+				 extra_data = #{bean.extraData},
+			</if>
+			<if test="bean.createTime != null">
+				 create_time = #{bean.createTime},
+			</if>
+ 		 </set>
+ 		 where message_id=#{messageId}
+	</update>
+
+	<!-- 根据MessageId删除-->
+	<delete id="deleteByMessageId">
+		delete from ai_chat_message where message_id=#{messageId}
+	</delete>
+
+	<!-- 根据PrimaryKey获取对象-->
+	<select id="selectByMessageId" resultMap="base_result_map" >
+		select <include refid="base_column_list" /> from ai_chat_message a where message_id=#{messageId}
+	</select>
+
+</mapper>

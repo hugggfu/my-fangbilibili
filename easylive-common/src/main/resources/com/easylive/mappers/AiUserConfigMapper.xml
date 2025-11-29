@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easylive.mappers.AiUserConfigMapper">
+
+	<!--实体映射-->
+	<resultMap id="base_result_map" type="com.easylive.entity.po.AiUserConfig">
+		<!--用户ID-->
+		<result column="user_id" property="userId"  />
+		<!--今日使用次数-->
+		<result column="daily_usage_count" property="dailyUsageCount"  />
+		<!--最后使用日期-->
+		<result column="last_usage_date" property="lastUsageDate"  />
+		<!--用户偏好设置(JSON格式): 主题、音效等-->
+		<result column="settings" property="settings"  />
+		<!--首次使用时间-->
+		<result column="create_time" property="createTime"  />
+	</resultMap>
+
+
+	<!-- 通用查询结果列-->
+	<sql id="base_column_list">
+		 a.user_id,a.daily_usage_count,a.last_usage_date,a.settings,a.create_time
+		 
+	</sql>
+
+	<sql id="base_condition_filed">
+			<if test="query.userId != null and query.userId!=''">
+				 and  a.user_id = #{query.userId}
+			</if>
+			<if test="query.dailyUsageCount != null">
+				 and  a.daily_usage_count = #{query.dailyUsageCount}
+			</if>
+			<if test="query.lastUsageDate != null and query.lastUsageDate!=''">
+				 <![CDATA[ and  a.last_usage_date=str_to_date(#{query.lastUsageDate}, '%Y-%m-%d') ]]>
+			</if>
+			<if test="query.settings != null and query.settings!=''">
+				 and  a.settings = #{query.settings}
+			</if>
+			<if test="query.createTime != null and query.createTime!=''">
+				 <![CDATA[ and  a.create_time=str_to_date(#{query.createTime}, '%Y-%m-%d') ]]>
+			</if>
+	</sql>
+	<!-- 通用条件列-->
+	<sql id="base_condition">
+	 <where>
+		 <include refid="base_condition_filed" />
+	 </where>
+	</sql>
+
+	<!-- 通用查询条件列-->
+	<sql id="query_condition">
+	 <where>
+			<include refid="base_condition_filed" />
+			<if test="query.userIdFuzzy!= null  and query.userIdFuzzy!=''">
+				 and  a.user_id like concat('%', #{query.userIdFuzzy}, '%')
+			</if>
+			<if test="query.lastUsageDateStart!= null and query.lastUsageDateStart!=''">
+				 <![CDATA[ and  a.last_usage_date>=str_to_date(#{query.lastUsageDateStart}, '%Y-%m-%d') ]]>
+			</if>
+			<if test="query.lastUsageDateEnd!= null and query.lastUsageDateEnd!=''">
+				 <![CDATA[ and  a.last_usage_date< date_sub(str_to_date(#{query.lastUsageDateEnd},'%Y-%m-%d'),interval -1 day) ]]>
+			</if>
+			<if test="query.settingsFuzzy!= null  and query.settingsFuzzy!=''">
+				 and  a.settings like concat('%', #{query.settingsFuzzy}, '%')
+			</if>
+			<if test="query.createTimeStart!= null and query.createTimeStart!=''">
+				 <![CDATA[ and  a.create_time>=str_to_date(#{query.createTimeStart}, '%Y-%m-%d') ]]>
+			</if>
+			<if test="query.createTimeEnd!= null and query.createTimeEnd!=''">
+				 <![CDATA[ and  a.create_time< date_sub(str_to_date(#{query.createTimeEnd},'%Y-%m-%d'),interval -1 day) ]]>
+			</if>
+	 </where>
+	</sql>
+
+	<!-- 查询集合-->
+	<select id="selectList" resultMap="base_result_map" >
+		 SELECT <include refid="base_column_list" /> FROM ai_user_config a <include refid="query_condition" />
+		 <if test="query.orderBy!=null">
+			 order by ${query.orderBy}
+		 </if>
+		 <if test="query.simplePage!=null">
+			 limit #{query.simplePage.start},#{query.simplePage.end}
+		 </if>
+	</select>
+
+	<!-- 查询数量-->
+	<select id="selectCount" resultType="java.lang.Integer" >
+		 SELECT count(1) FROM ai_user_config a <include refid="query_condition" />
+	</select>
+
+	<!-- 插入 （匹配有值的字段）-->
+	<insert id="insert" parameterType="com.easylive.entity.po.AiUserConfig">
+		 INSERT INTO ai_user_config
+		 <trim prefix="(" suffix=")" suffixOverrides="," >
+			<if test="bean.userId != null">
+				 user_id,
+			</if>
+			<if test="bean.dailyUsageCount != null">
+				 daily_usage_count,
+			</if>
+			<if test="bean.lastUsageDate != null">
+				 last_usage_date,
+			</if>
+			<if test="bean.settings != null">
+				 settings,
+			</if>
+			<if test="bean.createTime != null">
+				 create_time,
+			</if>
+		 </trim>
+		 <trim prefix="values (" suffix=")" suffixOverrides="," >
+			<if test="bean.userId!=null">
+				 #{bean.userId},
+			</if>
+			<if test="bean.dailyUsageCount!=null">
+				 #{bean.dailyUsageCount},
+			</if>
+			<if test="bean.lastUsageDate!=null">
+				 #{bean.lastUsageDate},
+			</if>
+			<if test="bean.settings!=null">
+				 #{bean.settings},
+			</if>
+			<if test="bean.createTime!=null">
+				 #{bean.createTime},
+			</if>
+		 </trim>
+	</insert>
+
+	<!-- 插入或者更新 （匹配有值的字段）-->
+	<insert id="insertOrUpdate" parameterType="com.easylive.entity.po.AiUserConfig">
+		 INSERT INTO ai_user_config
+		 <trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="bean.userId != null">
+				 user_id,
+			</if>
+			<if test="bean.dailyUsageCount != null">
+				 daily_usage_count,
+			</if>
+			<if test="bean.lastUsageDate != null">
+				 last_usage_date,
+			</if>
+			<if test="bean.settings != null">
+				 settings,
+			</if>
+			<if test="bean.createTime != null">
+				 create_time,
+			</if>
+		 </trim>
+		 <trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="bean.userId!=null">
+				 #{bean.userId},
+			</if>
+			<if test="bean.dailyUsageCount!=null">
+				 #{bean.dailyUsageCount},
+			</if>
+			<if test="bean.lastUsageDate!=null">
+				 #{bean.lastUsageDate},
+			</if>
+			<if test="bean.settings!=null">
+				 #{bean.settings},
+			</if>
+			<if test="bean.createTime!=null">
+				 #{bean.createTime},
+			</if>
+		 </trim>
+		 on DUPLICATE key update 
+		 <trim prefix="" suffix="" suffixOverrides=",">
+			<if test="bean.userId!=null">
+				 user_id = VALUES(user_id),
+			</if>
+			<if test="bean.dailyUsageCount!=null">
+				 daily_usage_count = VALUES(daily_usage_count),
+			</if>
+			<if test="bean.lastUsageDate!=null">
+				 last_usage_date = VALUES(last_usage_date),
+			</if>
+			<if test="bean.settings!=null">
+				 settings = VALUES(settings),
+			</if>
+			<if test="bean.createTime!=null">
+				 create_time = VALUES(create_time),
+			</if>
+		 </trim>
+	</insert>
+
+	<!-- 添加 （批量插入）-->
+	<insert id="insertBatch" parameterType="com.easylive.entity.po.AiUserConfig">
+		 INSERT INTO ai_user_config(
+			 user_id,
+			 daily_usage_count,
+			 last_usage_date,
+			 settings,
+			 create_time
+		 )values
+		 <foreach collection="list" item="item" separator=",">
+			 (
+				 #{item.userId},
+				 #{item.dailyUsageCount},
+				 #{item.lastUsageDate},
+				 #{item.settings},
+				 #{item.createTime}
+			 )
+		 </foreach>
+	</insert>
+
+	<!-- 批量新增修改 （批量插入）-->
+	<insert id="insertOrUpdateBatch" parameterType="com.easylive.entity.po.AiUserConfig">
+		 INSERT INTO ai_user_config(
+			 user_id,
+			 daily_usage_count,
+			 last_usage_date,
+			 settings,
+			 create_time
+		 )values
+		 <foreach collection="list" item="item" separator=",">
+			 (
+				 #{item.userId},
+				 #{item.dailyUsageCount},
+				 #{item.lastUsageDate},
+				 #{item.settings},
+				 #{item.createTime}
+			 )
+		 </foreach>
+			on DUPLICATE key update 
+			user_id = VALUES(user_id),
+			daily_usage_count = VALUES(daily_usage_count),
+			last_usage_date = VALUES(last_usage_date),
+			settings = VALUES(settings),
+			create_time = VALUES(create_time)
+	</insert>
+
+	<!--多条件修改-->
+	<update id="updateByParam" parameterType="com.easylive.entity.query.AiUserConfigQuery">
+		 UPDATE ai_user_config a
+ 		 <set> 
+			<if test="bean.userId != null">
+				 user_id = #{bean.userId},
+			</if>
+			<if test="bean.dailyUsageCount != null">
+				 daily_usage_count = #{bean.dailyUsageCount},
+			</if>
+			<if test="bean.lastUsageDate != null">
+				 last_usage_date = #{bean.lastUsageDate},
+			</if>
+			<if test="bean.settings != null">
+				 settings = #{bean.settings},
+			</if>
+			<if test="bean.createTime != null">
+				 create_time = #{bean.createTime},
+			</if>
+ 		 </set>
+ 		 <include refid="query_condition" />
+	</update>
+
+	<!--多条件删除-->
+	<delete id="deleteByParam">
+		 delete a from ai_user_config a
+ 		 <include refid="query_condition" />
+	</delete>
+
+	<!-- 根据UserId修改-->
+	<update id="updateByUserId" parameterType="com.easylive.entity.po.AiUserConfig">
+		 UPDATE ai_user_config
+ 		 <set> 
+			<if test="bean.dailyUsageCount != null">
+				 daily_usage_count = #{bean.dailyUsageCount},
+			</if>
+			<if test="bean.lastUsageDate != null">
+				 last_usage_date = #{bean.lastUsageDate},
+			</if>
+			<if test="bean.settings != null">
+				 settings = #{bean.settings},
+			</if>
+			<if test="bean.createTime != null">
+				 create_time = #{bean.createTime},
+			</if>
+ 		 </set>
+ 		 where user_id=#{userId}
+	</update>
+
+	<!-- 根据UserId删除-->
+	<delete id="deleteByUserId">
+		delete from ai_user_config where user_id=#{userId}
+	</delete>
+
+	<!-- 根据PrimaryKey获取对象-->
+	<select id="selectByUserId" resultMap="base_result_map" >
+		select <include refid="base_column_list" /> from ai_user_config a where user_id=#{userId}
+	</select>
+
+</mapper>

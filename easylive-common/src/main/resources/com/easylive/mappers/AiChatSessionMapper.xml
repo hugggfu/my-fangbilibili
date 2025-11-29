@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easylive.mappers.AiChatSessionMapper">
+
+	<!--实体映射-->
+	<resultMap id="base_result_map" type="com.easylive.entity.po.AiChatSession">
+		<!--会话ID-->
+		<id column="session_id" property="sessionId"  />
+		<!--用户ID-->
+		<result column="user_id" property="userId"  />
+		<!--会话标题-->
+		<result column="title" property="title"  />
+		<!--创建时间-->
+		<result column="create_time" property="createTime"  />
+		<!--最后更新时间-->
+		<result column="update_time" property="updateTime"  />
+		<!--是否删除: 0-否, 1-是-->
+		<result column="is_deleted" property="isDeleted"  />
+	</resultMap>
+
+
+	<!-- 通用查询结果列-->
+	<sql id="base_column_list">
+		 a.session_id,a.user_id,a.title,a.create_time,a.update_time,
+		 a.is_deleted
+	</sql>
+
+	<sql id="base_condition_filed">
+			<if test="query.sessionId != null">
+				 and  a.session_id = #{query.sessionId}
+			</if>
+			<if test="query.userId != null and query.userId!=''">
+				 and  a.user_id = #{query.userId}
+			</if>
+			<if test="query.title != null and query.title!=''">
+				 and  a.title = #{query.title}
+			</if>
+			<if test="query.createTime != null and query.createTime!=''">
+				 <![CDATA[ and  a.create_time=str_to_date(#{query.createTime}, '%Y-%m-%d') ]]>
+			</if>
+			<if test="query.updateTime != null and query.updateTime!=''">
+				 <![CDATA[ and  a.update_time=str_to_date(#{query.updateTime}, '%Y-%m-%d') ]]>
+			</if>
+			<if test="query.isDeleted != null">
+				 and  a.is_deleted = #{query.isDeleted}
+			</if>
+	</sql>
+	<!-- 通用条件列-->
+	<sql id="base_condition">
+	 <where>
+		 <include refid="base_condition_filed" />
+	 </where>
+	</sql>
+
+	<!-- 通用查询条件列-->
+	<sql id="query_condition">
+	 <where>
+			<include refid="base_condition_filed" />
+			<if test="query.userIdFuzzy!= null  and query.userIdFuzzy!=''">
+				 and  a.user_id like concat('%', #{query.userIdFuzzy}, '%')
+			</if>
+			<if test="query.titleFuzzy!= null  and query.titleFuzzy!=''">
+				 and  a.title like concat('%', #{query.titleFuzzy}, '%')
+			</if>
+			<if test="query.createTimeStart!= null and query.createTimeStart!=''">
+				 <![CDATA[ and  a.create_time>=str_to_date(#{query.createTimeStart}, '%Y-%m-%d') ]]>
+			</if>
+			<if test="query.createTimeEnd!= null and query.createTimeEnd!=''">
+				 <![CDATA[ and  a.create_time< date_sub(str_to_date(#{query.createTimeEnd},'%Y-%m-%d'),interval -1 day) ]]>
+			</if>
+			<if test="query.updateTimeStart!= null and query.updateTimeStart!=''">
+				 <![CDATA[ and  a.update_time>=str_to_date(#{query.updateTimeStart}, '%Y-%m-%d') ]]>
+			</if>
+			<if test="query.updateTimeEnd!= null and query.updateTimeEnd!=''">
+				 <![CDATA[ and  a.update_time< date_sub(str_to_date(#{query.updateTimeEnd},'%Y-%m-%d'),interval -1 day) ]]>
+			</if>
+	 </where>
+	</sql>
+
+	<!-- 查询集合-->
+	<select id="selectList" resultMap="base_result_map" >
+		 SELECT <include refid="base_column_list" /> FROM ai_chat_session a <include refid="query_condition" />
+		 <if test="query.orderBy!=null">
+			 order by ${query.orderBy}
+		 </if>
+		 <if test="query.simplePage!=null">
+			 limit #{query.simplePage.start},#{query.simplePage.end}
+		 </if>
+	</select>
+
+	<!-- 查询数量-->
+	<select id="selectCount" resultType="java.lang.Integer" >
+		 SELECT count(1) FROM ai_chat_session a <include refid="query_condition" />
+	</select>
+
+	<!-- 插入 （匹配有值的字段）-->
+	<insert id="insert" parameterType="com.easylive.entity.po.AiChatSession">
+		<selectKey keyProperty="bean.sessionId" resultType="Long" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+		 INSERT INTO ai_chat_session
+		 <trim prefix="(" suffix=")" suffixOverrides="," >
+			<if test="bean.userId != null">
+				 user_id,
+			</if>
+			<if test="bean.title != null">
+				 title,
+			</if>
+			<if test="bean.createTime != null">
+				 create_time,
+			</if>
+			<if test="bean.updateTime != null">
+				 update_time,
+			</if>
+			<if test="bean.isDeleted != null">
+				 is_deleted,
+			</if>
+		 </trim>
+		 <trim prefix="values (" suffix=")" suffixOverrides="," >
+			<if test="bean.userId!=null">
+				 #{bean.userId},
+			</if>
+			<if test="bean.title!=null">
+				 #{bean.title},
+			</if>
+			<if test="bean.createTime!=null">
+				 #{bean.createTime},
+			</if>
+			<if test="bean.updateTime!=null">
+				 #{bean.updateTime},
+			</if>
+			<if test="bean.isDeleted!=null">
+				 #{bean.isDeleted},
+			</if>
+		 </trim>
+	</insert>
+
+	<!-- 插入或者更新 （匹配有值的字段）-->
+	<insert id="insertOrUpdate" parameterType="com.easylive.entity.po.AiChatSession">
+		 INSERT INTO ai_chat_session
+		 <trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="bean.sessionId != null">
+				 session_id,
+			</if>
+			<if test="bean.userId != null">
+				 user_id,
+			</if>
+			<if test="bean.title != null">
+				 title,
+			</if>
+			<if test="bean.createTime != null">
+				 create_time,
+			</if>
+			<if test="bean.updateTime != null">
+				 update_time,
+			</if>
+			<if test="bean.isDeleted != null">
+				 is_deleted,
+			</if>
+		 </trim>
+		 <trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="bean.sessionId!=null">
+				 #{bean.sessionId},
+			</if>
+			<if test="bean.userId!=null">
+				 #{bean.userId},
+			</if>
+			<if test="bean.title!=null">
+				 #{bean.title},
+			</if>
+			<if test="bean.createTime!=null">
+				 #{bean.createTime},
+			</if>
+			<if test="bean.updateTime!=null">
+				 #{bean.updateTime},
+			</if>
+			<if test="bean.isDeleted!=null">
+				 #{bean.isDeleted},
+			</if>
+		 </trim>
+		 on DUPLICATE key update 
+		 <trim prefix="" suffix="" suffixOverrides=",">
+			<if test="bean.userId!=null">
+				 user_id = VALUES(user_id),
+			</if>
+			<if test="bean.title!=null">
+				 title = VALUES(title),
+			</if>
+			<if test="bean.createTime!=null">
+				 create_time = VALUES(create_time),
+			</if>
+			<if test="bean.updateTime!=null">
+				 update_time = VALUES(update_time),
+			</if>
+			<if test="bean.isDeleted!=null">
+				 is_deleted = VALUES(is_deleted),
+			</if>
+		 </trim>
+	</insert>
+
+	<!-- 添加 （批量插入）-->
+	<insert id="insertBatch" parameterType="com.easylive.entity.po.AiChatSession" useGeneratedKeys="true" keyProperty="sessionId">
+		 INSERT INTO ai_chat_session(
+			 user_id,
+			 title,
+			 create_time,
+			 update_time,
+			 is_deleted
+		 )values
+		 <foreach collection="list" item="item" separator=",">
+			 (
+				 #{item.userId},
+				 #{item.title},
+				 #{item.createTime},
+				 #{item.updateTime},
+				 #{item.isDeleted}
+			 )
+		 </foreach>
+	</insert>
+
+	<!-- 批量新增修改 （批量插入）-->
+	<insert id="insertOrUpdateBatch" parameterType="com.easylive.entity.po.AiChatSession">
+		 INSERT INTO ai_chat_session(
+			 user_id,
+			 title,
+			 create_time,
+			 update_time,
+			 is_deleted
+		 )values
+		 <foreach collection="list" item="item" separator=",">
+			 (
+				 #{item.userId},
+				 #{item.title},
+				 #{item.createTime},
+				 #{item.updateTime},
+				 #{item.isDeleted}
+			 )
+		 </foreach>
+			on DUPLICATE key update 
+			user_id = VALUES(user_id),
+			title = VALUES(title),
+			create_time = VALUES(create_time),
+			update_time = VALUES(update_time),
+			is_deleted = VALUES(is_deleted)
+	</insert>
+
+	<!--多条件修改-->
+	<update id="updateByParam" parameterType="com.easylive.entity.query.AiChatSessionQuery">
+		 UPDATE ai_chat_session a
+ 		 <set> 
+			<if test="bean.userId != null">
+				 user_id = #{bean.userId},
+			</if>
+			<if test="bean.title != null">
+				 title = #{bean.title},
+			</if>
+			<if test="bean.createTime != null">
+				 create_time = #{bean.createTime},
+			</if>
+			<if test="bean.updateTime != null">
+				 update_time = #{bean.updateTime},
+			</if>
+			<if test="bean.isDeleted != null">
+				 is_deleted = #{bean.isDeleted},
+			</if>
+ 		 </set>
+ 		 <include refid="query_condition" />
+	</update>
+
+	<!--多条件删除-->
+	<delete id="deleteByParam">
+		 delete a from ai_chat_session a
+ 		 <include refid="query_condition" />
+	</delete>
+
+	<!-- 根据SessionId修改-->
+	<update id="updateBySessionId" parameterType="com.easylive.entity.po.AiChatSession">
+		 UPDATE ai_chat_session
+ 		 <set> 
+			<if test="bean.userId != null">
+				 user_id = #{bean.userId},
+			</if>
+			<if test="bean.title != null">
+				 title = #{bean.title},
+			</if>
+			<if test="bean.createTime != null">
+				 create_time = #{bean.createTime},
+			</if>
+			<if test="bean.updateTime != null">
+				 update_time = #{bean.updateTime},
+			</if>
+			<if test="bean.isDeleted != null">
+				 is_deleted = #{bean.isDeleted},
+			</if>
+ 		 </set>
+ 		 where session_id=#{sessionId}
+	</update>
+
+	<!-- 根据SessionId删除-->
+	<delete id="deleteBySessionId">
+		delete from ai_chat_session where session_id=#{sessionId}
+	</delete>
+
+	<!-- 根据PrimaryKey获取对象-->
+	<select id="selectBySessionId" resultMap="base_result_map" >
+		select <include refid="base_column_list" /> from ai_chat_session a where session_id=#{sessionId}
+	</select>
+
+</mapper>
