@@ -89,7 +89,7 @@ public class ABaseController {
 
     protected void saveToken2Cookie(HttpServletResponse response, String token) {
         //把生成的token保存到cookie中
-        Cookie cookie = new Cookie(Constants.TOKEN_WEB, token);
+        Cookie cookie = new Cookie(Constants.TOKEN_ADMIN, token);
         cookie.setMaxAge(Constants.TIME_SECONDS_DAY * 7);
         cookie.setPath("/");
         response.addCookie(cookie);
