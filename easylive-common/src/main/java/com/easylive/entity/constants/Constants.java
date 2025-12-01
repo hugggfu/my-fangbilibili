@@ -99,4 +99,16 @@ public class Constants {
     public static final String  VIDEO_CODE_HEVC= "hevc";
 
     public static final String  VIDEO_CODE_TEMP_FILE_SUFFIX= "_temp";
+
+    /**
+     * AI 聊天上下文缓存 Key
+     * 格式: ai:context:sessionId
+     */
+    public static final String REDIS_KEY_AI_CONTEXT = REDIS_KEY_PREFIX + "ai:context:";
+
+    /**
+     * AI 上下文过期时间 (1小时)
+     * 1小时内没有新消息,上下文自动清除
+     */
+    public static final Long REDIS_KEY_AI_CONTEXT_EXPIRE = (long) (REDIS_KEY_EXPIRES_ONE_MIN * 60);
 }

@@ -5,10 +5,7 @@ import com.aliyun.oss.OSSClientBuilder;
 import com.easylive.entity.config.AppConfig;
 import com.easylive.entity.config.OssConfig;
 import com.easylive.entity.constants.Constants;
-import com.easylive.entity.dto.SysSettingDto;
-import com.easylive.entity.dto.TokenUserInfoDto;
-import com.easylive.entity.dto.UploadingFileDto;
-import com.easylive.entity.dto.VideoPlayInfoDto;
+import com.easylive.entity.dto.*;
 import com.easylive.entity.enums.DateTimePatternEnum;
 
 import com.easylive.entity.po.CategoryInfo;
@@ -22,10 +19,7 @@ import javax.annotation.Resource;
 import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Component
 public class RedisComponent {
@@ -236,6 +230,82 @@ public class RedisComponent {
     public Map<String, Integer> getVideoPlayCount(String date) {
         Map<String, Integer> videoPlayMap = redisUtils.getBatch(Constants.REDIS_KEY_VIDEO_PLAY_COUNT + date);
         return videoPlayMap;
+    }
+
+    // ==================== AI 上下文管理 ====================
+
+    /**
+     * 保存 AI 对话上下文到 Redis
+     *
+     * @param sessionId 会话 ID
+     * @param messages 消息列表
+     */
+    public void saveAiContext(Long sessionId, List<AiMessageDto> messages) {
+        String key = Constants.REDIS_KEY_AI_CONTEXT + sessionId;
+        redisUtils.setex(key, messages, Constants.REDIS_KEY_AI_CONTEXT_EXPIRE);
+    }
+
+    /**
+     * 获取 AI 对话上下文
+     *
+     * @param sessionId 会话 ID
+     * @return 消息列表,如果不存在返回 null
+     */
+    public List<AiMessageDto> getAiContext(Long sessionId) {
+        String key = Constants.REDIS_KEY_AI_CONTEXT + sessionId;
+        return (List<AiMessageDto>) redisUtils.get(key);
+    }
+
+    /**
+     * 添加消息到上下文
+     * 如果上下文不存在,则创建新的
+     *
+     * @param sessionId 会话 ID
+     * @param message 新消息
+     * @param maxContextSize 最大上下文数量
+     */
+    public void addMessageToContext(Long sessionId, AiMessageDto message, Integer maxContextSize) {
+        List<AiMessageDto> context = getAiContext(sessionId);
+
+        if (context == null) {
+            context = new ArrayList<>();
+        }
+
+        // 添加新消息
+        context.add(message);
+
+        // 如果超过最大数量,移除最早的消息(保留系统提示词)
+        if (context.size() > maxContextSize) {
+            // 保留第一条(系统提示词)和最新的消息
+            List<AiMessageDto> newContext = new ArrayList<>();
+            newContext.add(context.get(0)); // 系统提示词
+            newContext.addAll(context.subList(context.size() - maxContextSize + 1, context.size()));
+            context = newContext;
+        }
+
+        // 保存回 Redis
+        saveAiContext(sessionId, context);
+    }
+
+    /**
+     * 清除 AI 对话上下文
+     *
+     * @param sessionId 会话 ID
+     */
+    public void clearAiContext(Long sessionId) {
+        String key = Constants.REDIS_KEY_AI_CONTEXT + sessionId;
+        redisUtils.delete(key);
+    }
+
+    /**
+     * 刷新上下文过期时间
+     * 每次对话时调用,保持上下文活跃
+     *
+     * @param sessionId 会话 ID
+     */
+    public void refreshAiContextExpire(Long sessionId) {
+        String key = Constants.REDIS_KEY_AI_CONTEXT + sessionId;
+        redisUtils.expire(key, Constants.REDIS_KEY_AI_CONTEXT_EXPIRE);
     }
 
 

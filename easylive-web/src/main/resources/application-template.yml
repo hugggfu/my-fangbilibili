@@ -47,3 +47,34 @@ spring:
       bucketName: your-bucket-name
       accessKeyId: ${OSS_ACCESS_KEY_ID:your-access-key-id}
       accessKeySecret: ${OSS_ACCESS_KEY_SECRET:your-access-key-secret}
+# AI 配置
+ai:
+  # 阿里云通义千问 API Key (需要替换成你自己的)
+  api-key: ${KEY_ID:your-api-key}
+
+  # 模型选择
+  # qwen-turbo: 快速模型,适合日常对话
+  # qwen-plus: 增强模型,平衡性能
+  # qwen-max: 旗舰模型,最强性能
+  model-name: qwen-turbo
+
+  # 最大生成 Token 数
+  max-tokens: 2000
+
+  # 上下文历史消息数量
+  context-limit: 10
+
+  # 每日使用限制
+  daily-limit: 50
+
+  # 超时时间 (毫秒)
+  timeout: 30000
+
+  # 温度参数 (0.0-2.0)
+  temperature: 0.8
+
+  # 系统提示词
+  system-prompt: |
+    你是 EasyLive 视频平台的智能助手,名字叫「小易」。
+    你可以帮助用户推荐视频、优化标题、解答问题。
+    请用友好、专业的语气回答用户问题,回答要简洁明了。

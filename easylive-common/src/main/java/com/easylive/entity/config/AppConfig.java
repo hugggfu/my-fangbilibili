@@ -51,5 +51,4 @@ public class AppConfig {
         return projectFolder;
     }
 
-
 }
