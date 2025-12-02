@@ -79,7 +79,8 @@ public class EsSearchComponent {
                             "          \"pattern\": \",\"\n" +
                             "        }\n" +
                             "      }\n" +
-                            "    }}", XContentType.JSON);
+                            "    }}",
+                    XContentType.JSON);
 
             request.mapping(
                     "{\"properties\": {\n" +
@@ -111,6 +112,10 @@ public class EsSearchComponent {
                             "        \"type\":\"integer\",\n" +
                             "        \"index\":false\n" +
                             "      },\n" +
+                            "      \"duration\":{\n" +
+                            "        \"type\":\"integer\",\n" +
+                            "        \"index\":false\n" +
+                            "      },\n" +
                             "      \"collectCount\":{\n" +
                             "        \"type\":\"integer\",\n" +
                             "        \"index\":false\n" +
@@ -120,9 +125,11 @@ public class EsSearchComponent {
                             "        \"format\": \"yyyy-MM-dd HH:mm:ss\",\n" +
                             "        \"index\": false\n" +
                             "      }\n" +
-                            " }}", XContentType.JSON);
+                            " }}",
+                    XContentType.JSON);
 
-            CreateIndexResponse createIndexResponse = restHighLevelClient.indices().create(request, RequestOptions.DEFAULT);
+            CreateIndexResponse createIndexResponse = restHighLevelClient.indices().create(request,
+                    RequestOptions.DEFAULT);
             boolean acknowledged = createIndexResponse.isAcknowledged();
             if (!acknowledged) {
                 throw new BusinessException("初始化es失败");
@@ -164,7 +171,7 @@ public class EsSearchComponent {
 
     private void updateDoc(VideoInfo videoInfo) {
         try {
-            //时间不更新
+            // 时间不更新
             videoInfo.setLastUpdateTime(null);
             videoInfo.setCreateTime(null);
             Map<String, Object> dataMap = new HashMap<>();
@@ -173,7 +180,8 @@ public class EsSearchComponent {
                 String methodName = "get" + StringTools.upperCaseFirstLetter(field.getName());
                 Method method = videoInfo.getClass().getMethod(methodName);
                 Object object = method.invoke(videoInfo);
-                if (object != null && object instanceof java.lang.String && !StringTools.isEmpty(object.toString()) || object != null && !(object instanceof java.lang.String)) {
+                if (object != null && object instanceof java.lang.String && !StringTools.isEmpty(object.toString())
+                        || object != null && !(object instanceof java.lang.String)) {
                     dataMap.put(field.getName(), object);
                 }
             }
@@ -194,7 +202,8 @@ public class EsSearchComponent {
         try {
 
             UpdateRequest updateRequest = new UpdateRequest(appConfig.getEsIndexVideoName(), videoId);
-            Script script = new Script(ScriptType.INLINE, "painless", "ctx._source." + fieldName + " += params.count", Collections.singletonMap("count", count));
+            Script script = new Script(ScriptType.INLINE, "painless", "ctx._source." + fieldName + " += params.count",
+                    Collections.singletonMap("count", count));
             updateRequest.script(script);
             restHighLevelClient.update(updateRequest, RequestOptions.DEFAULT);
         } catch (Exception e) {
@@ -214,17 +223,18 @@ public class EsSearchComponent {
 
     }
 
-    public PaginationResultVO<VideoInfo> search(Boolean highlight, String keyword, Integer orderType, Integer pageNo, Integer pageSize) {
+    public PaginationResultVO<VideoInfo> search(Boolean highlight, String keyword, Integer orderType, Integer pageNo,
+            Integer pageSize) {
         try {
 
             SearchOrderTypeEnum searchOrderTypeEnum = SearchOrderTypeEnum.getByType(orderType);
 
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-            //关键字
+            // 关键字
             searchSourceBuilder.query(QueryBuilders.multiMatchQuery(keyword, "videoName", "tags"));
 
             if (highlight) {
-                //高亮
+                // 高亮
                 HighlightBuilder highlightBuilder = new HighlightBuilder();
                 highlightBuilder.field("videoName"); // 替换为你想要高亮的字段名
                 highlightBuilder.preTags("<span class='highlight'>");
@@ -232,15 +242,14 @@ public class EsSearchComponent {
                 searchSourceBuilder.highlighter(highlightBuilder);
             }
 
-
-            //排序
+            // 排序
             if (orderType != null) {
                 searchSourceBuilder.sort(searchOrderTypeEnum.getField(), SortOrder.DESC); // 第一个排序字段，升序
-            }else{
+            } else {
                 searchSourceBuilder.sort("_score", SortOrder.DESC); // 第一个排序字段，倒序
             }
             pageNo = pageNo == null ? 1 : pageNo;
-            //分页查询
+            // 分页查询
             pageSize = pageSize == null ? PageSize.SIZE20.getSize() : pageSize;
             searchSourceBuilder.size(pageSize);
             searchSourceBuilder.from((pageNo - 1) * pageSize);
@@ -269,10 +278,11 @@ public class EsSearchComponent {
 
             }
 
-// 新增: 如果没有视频,直接返回空结果
+            // 新增: 如果没有视频,直接返回空结果
             if (userIdList.isEmpty()) {
                 SimplePage page = new SimplePage(pageNo, 0, pageSize);
-                PaginationResultVO<VideoInfo> result = new PaginationResultVO(0, page.getPageSize(), page.getPageNo(), page.getPageTotal(), videoInfoList);
+                PaginationResultVO<VideoInfo> result = new PaginationResultVO(0, page.getPageSize(), page.getPageNo(),
+                        page.getPageTotal(), videoInfoList);
                 return result;
             }
 
@@ -280,7 +290,8 @@ public class EsSearchComponent {
             userInfoQuery.setUserIdList(userIdList);
             List<UserInfo> userInfoList = userInfoMapper.selectList(userInfoQuery);
 
-            Map<String, UserInfo> userInfoMap = userInfoList.stream().collect(Collectors.toMap(item -> item.getUserId(), Function.identity(), (data1, data2) -> data2));
+            Map<String, UserInfo> userInfoMap = userInfoList.stream()
+                    .collect(Collectors.toMap(item -> item.getUserId(), Function.identity(), (data1, data2) -> data2));
             videoInfoList.forEach(item -> {
                 UserInfo userInfo = userInfoMap.get(item.getUserId());
                 if (userInfo != null) {
@@ -288,7 +299,8 @@ public class EsSearchComponent {
                 }
             });
             SimplePage page = new SimplePage(pageNo, totalCount, pageSize);
-            PaginationResultVO<VideoInfo> result = new PaginationResultVO(totalCount, page.getPageSize(), page.getPageNo(), page.getPageTotal(), videoInfoList);
+            PaginationResultVO<VideoInfo> result = new PaginationResultVO(totalCount, page.getPageSize(),
+                    page.getPageNo(), page.getPageTotal(), videoInfoList);
             return result;
         } catch (BusinessException e) {
             throw e;

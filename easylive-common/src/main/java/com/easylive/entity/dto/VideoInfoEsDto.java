@@ -6,7 +6,6 @@ import java.util.Date;
 
 public class VideoInfoEsDto {
 
-
     /**
      * 视频ID
      */
@@ -53,6 +52,7 @@ public class VideoInfoEsDto {
      */
     private Integer collectCount;
 
+    private Integer duration;
 
     public String getVideoId() {
         return videoId;
@@ -124,5 +124,13 @@ public class VideoInfoEsDto {
 
     public void setCollectCount(Integer collectCount) {
         this.collectCount = collectCount;
+    }
+
+    public Integer getDuration() {
+        return duration;
+    }
+
+    public void setDuration(Integer duration) {
+        this.duration = duration;
     }
 }

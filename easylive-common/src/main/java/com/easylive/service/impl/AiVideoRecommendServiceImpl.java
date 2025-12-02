@@ -51,11 +51,11 @@ public class AiVideoRecommendServiceImpl implements AiVideoRecommendService {
 
         // 使用 ES 搜索视频
         PaginationResultVO<VideoInfo> searchResult = esSearchComponent.search(
-                false,  // 不需要高亮
+                true, // 不需要高亮
                 keywords,
-                null,   // 不指定排序,使用相关度排序
-                1,      // 第一页
-                limit   // 限制数量
+                null, // 不指定排序,使用相关度排序
+                1, // 第一页
+                limit // 限制数量
         );
 
         List<VideoInfo> videoList = searchResult.getList();
@@ -69,6 +69,7 @@ public class AiVideoRecommendServiceImpl implements AiVideoRecommendService {
         // 转换为 DTO
         return convertToDto(videoList);
     }
+
     @Override
     public List<VideoRecommendDto> getHotVideos(Integer limit) {
         log.info("获取热门视频, 限制: {}", limit);
@@ -76,9 +77,9 @@ public class AiVideoRecommendServiceImpl implements AiVideoRecommendService {
         // 构建查询条件: 按播放量排序(去掉24小时限制)
         VideoInfoQuery query = new VideoInfoQuery();
         query.setOrderBy("play_count desc");
-        // query.setLastPlayHour(24);  // 注释掉这行,不限制时间
+        // query.setLastPlayHour(24); // 注释掉这行,不限制时间
         query.setPageSize(limit);
-        query.setQueryUserInfo(true);  // 查询用户信息
+        query.setQueryUserInfo(true); // 查询用户信息
 
         PaginationResultVO<VideoInfo> result = videoInfoService.findListByPage(query);
         List<VideoInfo> videoList = result.getList();
@@ -88,6 +89,7 @@ public class AiVideoRecommendServiceImpl implements AiVideoRecommendService {
         // 转换为 DTO
         return convertToDto(videoList);
     }
+
     @Override
     public boolean needVideoRecommend(String message) {
         // 关键词列表
@@ -169,7 +171,7 @@ public class AiVideoRecommendServiceImpl implements AiVideoRecommendService {
                 "旅游", "旅行", "风景", "景点",
                 "搞笑", "幽默", "段子", "喜剧",
                 "知识", "科普", "教程", "学习",
-                "女朋友", "男朋友", "情侣", "恋爱",  // 新增
+                "女朋友", "男朋友", "情侣", "恋爱", // 新增
                 "动漫", "二次元", "番剧",
                 "电影", "影视", "剧集"
         };
@@ -202,6 +204,7 @@ public class AiVideoRecommendServiceImpl implements AiVideoRecommendService {
 
         return result;
     }
+
     /**
      * 将 VideoInfo 转换为 VideoRecommendDto
      */
@@ -215,10 +218,9 @@ public class AiVideoRecommendServiceImpl implements AiVideoRecommendService {
             dto.setUserId(video.getUserId());
             dto.setPlayCount(video.getPlayCount());
             dto.setDanmuCount(video.getDanmuCount());
-            dto.setDuration(video.getDuration() != null ?
-                    formatDuration(video.getDuration()) : "00:00");
-            dto.setCreateTime(video.getCreateTime() != null ?
-                    DateUtil.format(video.getCreateTime(), "yyyy-MM-dd") : "");
+            dto.setDuration(video.getDuration() != null ? formatDuration(video.getDuration()) : "00:00");
+            dto.setCreateTime(
+                    video.getCreateTime() != null ? DateUtil.format(video.getCreateTime(), "yyyy-MM-dd") : "");
             return dto;
         }).collect(Collectors.toList());
     }
