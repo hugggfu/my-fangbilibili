@@ -12,11 +12,15 @@ import com.easylive.component.RedisComponent;
 import com.easylive.entity.config.AiConfig;
 import com.easylive.entity.dto.AiChatResponseDto;
 import com.easylive.entity.dto.AiMessageDto;
+import com.easylive.entity.dto.VideoRecommendDto;
 import com.easylive.entity.po.AiChatSession;
 import com.easylive.entity.po.AiUserConfig;
 import com.easylive.exception.BusinessException;
 import com.easylive.service.AiChatSessionService;
 import com.easylive.service.AiUserConfigService;
+import com.easylive.service.AiVideoRecommendService;
+import com.easylive.utils.JsonUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import com.easylive.entity.enums.PageSize;
@@ -33,15 +37,14 @@ import org.springframework.transaction.annotation.Transactional;
  * AI对话消息表 业务接口实现
  */
 @Service("aiChatMessageService")
+@Slf4j
 public class AiChatMessageServiceImpl implements AiChatMessageService {
 
-	@Resource
-	private AiChatMessageMapper<AiChatMessage, AiChatMessageQuery> aiChatMessageMapper;
+    @Resource
+    private AiChatMessageMapper<AiChatMessage, AiChatMessageQuery> aiChatMessageMapper;
 
     @Resource
     private AiChatSessionService aiChatSessionService;
-
-
 
     @Resource
     private AiUserConfigService aiUserConfigService;
@@ -55,109 +58,112 @@ public class AiChatMessageServiceImpl implements AiChatMessageService {
     @Resource
     private RedisComponent redisComponent;
 
-	/**
-	 * 根据条件查询列表
-	 */
-	@Override
-	public List<AiChatMessage> findListByParam(AiChatMessageQuery param) {
-		return this.aiChatMessageMapper.selectList(param);
-	}
+    @Resource
+    private AiVideoRecommendService aiVideoRecommendService;
 
-	/**
-	 * 根据条件查询列表
-	 */
-	@Override
-	public Integer findCountByParam(AiChatMessageQuery param) {
-		return this.aiChatMessageMapper.selectCount(param);
-	}
+    /**
+     * 根据条件查询列表
+     */
+    @Override
+    public List<AiChatMessage> findListByParam(AiChatMessageQuery param) {
+        return this.aiChatMessageMapper.selectList(param);
+    }
 
-	/**
-	 * 分页查询方法
-	 */
-	@Override
-	public PaginationResultVO<AiChatMessage> findListByPage(AiChatMessageQuery param) {
-		int count = this.findCountByParam(param);
-		int pageSize = param.getPageSize() == null ? PageSize.SIZE15.getSize() : param.getPageSize();
+    /**
+     * 根据条件查询列表
+     */
+    @Override
+    public Integer findCountByParam(AiChatMessageQuery param) {
+        return this.aiChatMessageMapper.selectCount(param);
+    }
 
-		SimplePage page = new SimplePage(param.getPageNo(), count, pageSize);
-		param.setSimplePage(page);
-		List<AiChatMessage> list = this.findListByParam(param);
-		PaginationResultVO<AiChatMessage> result = new PaginationResultVO(count, page.getPageSize(), page.getPageNo(),
-				page.getPageTotal(), list);
-		return result;
-	}
+    /**
+     * 分页查询方法
+     */
+    @Override
+    public PaginationResultVO<AiChatMessage> findListByPage(AiChatMessageQuery param) {
+        int count = this.findCountByParam(param);
+        int pageSize = param.getPageSize() == null ? PageSize.SIZE15.getSize() : param.getPageSize();
 
-	/**
-	 * 新增
-	 */
-	@Override
-	public Integer add(AiChatMessage bean) {
-		return this.aiChatMessageMapper.insert(bean);
-	}
+        SimplePage page = new SimplePage(param.getPageNo(), count, pageSize);
+        param.setSimplePage(page);
+        List<AiChatMessage> list = this.findListByParam(param);
+        PaginationResultVO<AiChatMessage> result = new PaginationResultVO(count, page.getPageSize(), page.getPageNo(),
+                page.getPageTotal(), list);
+        return result;
+    }
 
-	/**
-	 * 批量新增
-	 */
-	@Override
-	public Integer addBatch(List<AiChatMessage> listBean) {
-		if (listBean == null || listBean.isEmpty()) {
-			return 0;
-		}
-		return this.aiChatMessageMapper.insertBatch(listBean);
-	}
+    /**
+     * 新增
+     */
+    @Override
+    public Integer add(AiChatMessage bean) {
+        return this.aiChatMessageMapper.insert(bean);
+    }
 
-	/**
-	 * 批量新增或者修改
-	 */
-	@Override
-	public Integer addOrUpdateBatch(List<AiChatMessage> listBean) {
-		if (listBean == null || listBean.isEmpty()) {
-			return 0;
-		}
-		return this.aiChatMessageMapper.insertOrUpdateBatch(listBean);
-	}
+    /**
+     * 批量新增
+     */
+    @Override
+    public Integer addBatch(List<AiChatMessage> listBean) {
+        if (listBean == null || listBean.isEmpty()) {
+            return 0;
+        }
+        return this.aiChatMessageMapper.insertBatch(listBean);
+    }
 
-	/**
-	 * 多条件更新
-	 */
-	@Override
-	public Integer updateByParam(AiChatMessage bean, AiChatMessageQuery param) {
-		StringTools.checkParam(param);
-		return this.aiChatMessageMapper.updateByParam(bean, param);
-	}
+    /**
+     * 批量新增或者修改
+     */
+    @Override
+    public Integer addOrUpdateBatch(List<AiChatMessage> listBean) {
+        if (listBean == null || listBean.isEmpty()) {
+            return 0;
+        }
+        return this.aiChatMessageMapper.insertOrUpdateBatch(listBean);
+    }
 
-	/**
-	 * 多条件删除
-	 */
-	@Override
-	public Integer deleteByParam(AiChatMessageQuery param) {
-		StringTools.checkParam(param);
-		return this.aiChatMessageMapper.deleteByParam(param);
-	}
+    /**
+     * 多条件更新
+     */
+    @Override
+    public Integer updateByParam(AiChatMessage bean, AiChatMessageQuery param) {
+        StringTools.checkParam(param);
+        return this.aiChatMessageMapper.updateByParam(bean, param);
+    }
 
-	/**
-	 * 根据MessageId获取对象
-	 */
-	@Override
-	public AiChatMessage getAiChatMessageByMessageId(Long messageId) {
-		return this.aiChatMessageMapper.selectByMessageId(messageId);
-	}
+    /**
+     * 多条件删除
+     */
+    @Override
+    public Integer deleteByParam(AiChatMessageQuery param) {
+        StringTools.checkParam(param);
+        return this.aiChatMessageMapper.deleteByParam(param);
+    }
 
-	/**
-	 * 根据MessageId修改
-	 */
-	@Override
-	public Integer updateAiChatMessageByMessageId(AiChatMessage bean, Long messageId) {
-		return this.aiChatMessageMapper.updateByMessageId(bean, messageId);
-	}
+    /**
+     * 根据MessageId获取对象
+     */
+    @Override
+    public AiChatMessage getAiChatMessageByMessageId(Long messageId) {
+        return this.aiChatMessageMapper.selectByMessageId(messageId);
+    }
 
-	/**
-	 * 根据MessageId删除
-	 */
-	@Override
-	public Integer deleteAiChatMessageByMessageId(Long messageId) {
-		return this.aiChatMessageMapper.deleteByMessageId(messageId);
-	}
+    /**
+     * 根据MessageId修改
+     */
+    @Override
+    public Integer updateAiChatMessageByMessageId(AiChatMessage bean, Long messageId) {
+        return this.aiChatMessageMapper.updateByMessageId(bean, messageId);
+    }
+
+    /**
+     * 根据MessageId删除
+     */
+    @Override
+    public Integer deleteAiChatMessageByMessageId(Long messageId) {
+        return this.aiChatMessageMapper.deleteByMessageId(messageId);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -165,7 +171,7 @@ public class AiChatMessageServiceImpl implements AiChatMessageService {
 
         // ========== 步骤 1: 检查每日使用限制 ==========
         AiUserConfig aiUserConfig = aiUserConfigService.getAiUserConfigByUserId(userId);
-        if(aiUserConfig==null){
+        if (aiUserConfig == null) {
             // 首次使用,创建配置
             aiUserConfig = new AiUserConfig();
             aiUserConfig.setUserId(userId);
@@ -173,9 +179,9 @@ public class AiChatMessageServiceImpl implements AiChatMessageService {
             aiUserConfig.setLastUsageDate(new Date());
             aiUserConfig.setCreateTime(new Date());
             aiUserConfigService.add(aiUserConfig);
-        }else{
+        } else {
             // 检查是否需要重置每日计数(跨天了)
-            if(needResetDailyCount(aiUserConfig.getLastUsageDate())){
+            if (needResetDailyCount(aiUserConfig.getLastUsageDate())) {
                 aiUserConfig.setDailyUsageCount(0);
                 aiUserConfig.setLastUsageDate(new Date());
             }
@@ -184,10 +190,10 @@ public class AiChatMessageServiceImpl implements AiChatMessageService {
                 throw new BusinessException("今日使用次数已达上限 (" + aiConfig.getDailyLimit() + " 次),请明天再试");
             }
         }
-                          // ========== 步骤 2: 处理会话 ==========
+        // ========== 步骤 2: 处理会话 ==========
         AiChatSession aiChatSession;
-        Boolean IsNewChat=false;
-        if(chatId==null){
+        Boolean IsNewChat = false;
+        if (chatId == null) {
             // 创建新会话
             aiChatSession = new AiChatSession();
             aiChatSession.setUserId(userId);
@@ -220,13 +226,61 @@ public class AiChatMessageServiceImpl implements AiChatMessageService {
 
         aiChatMessageMapper.insert(userMessage);
 
+        // ========== 新增: 检测是否需要视频推荐 ==========
+        boolean needRecommend = aiVideoRecommendService.needVideoRecommend(message);
+        List<VideoRecommendDto> recommendedVideos = null;
+        String recommendType = null; // "search" 或 "hot"
+
+        if (needRecommend) {
+            log.info("检测到视频推荐需求");
+
+            // 判断是热门视频还是搜索推荐
+            if (message.contains("热门") || message.contains("最火") || message.contains("爆款")) {
+                // 获取热门视频
+                recommendedVideos = aiVideoRecommendService.getHotVideos(5);
+                recommendType = "hot";
+                log.info("推荐热门视频,数量: {}", recommendedVideos.size());
+            } else {
+                // 根据关键词推荐
+                recommendedVideos = aiVideoRecommendService.recommendByQuery(message, 5);
+                recommendType = "search";
+                log.info("根据关键词推荐视频,数量: {}", recommendedVideos.size());
+            }
+        }
+
         // ========== 步骤 4: 构建 AI 上下文 ==========
         List<AiMessageDto> contextMessages = buildContext(chatId);
         // 添加当前用户消息
+        String userMessageContent = message;
+
+        // 如果有视频推荐,告知 AI 具体的视频信息
+        if (needRecommend && recommendedVideos != null && !recommendedVideos.isEmpty()) {
+            // 构建视频信息字符串
+            StringBuilder videoInfo = new StringBuilder();
+            videoInfo.append("\n\n[系统提示: 已为用户准备了以下 ").append(recommendedVideos.size()).append(" 个");
+            videoInfo.append(recommendType.equals("hot") ? "热门" : "相关").append("视频:\n");
+
+            for (int i = 0; i < recommendedVideos.size(); i++) {
+                VideoRecommendDto video = recommendedVideos.get(i);
+                videoInfo.append((i + 1)).append(". 《").append(video.getVideoName()).append("》");
+                videoInfo.append(" - UP主: ").append(video.getNickName());
+                videoInfo.append(", 播放量: ").append(video.getPlayCount());
+                videoInfo.append("\n");
+            }
+
+            videoInfo.append("\n请用友好、简洁的语气向用户介绍这些视频。");
+            videoInfo.append("重要提示: 必须使用上面提供的真实视频标题,不要编造或修改视频名称。");
+            videoInfo.append("可以简单说明这是热门视频或相关推荐,但不要对视频内容做过多猜测。]");
+
+            userMessageContent = message + videoInfo.toString();
+
+        }
+
         contextMessages.add(AiMessageDto.builder()
                 .role("user")
-                .content(message)
+                .content(userMessageContent)
                 .build());
+
         // ========== 步骤 5: 调用 AI ==========
         String aiResponse;
         try {
@@ -240,11 +294,15 @@ public class AiChatMessageServiceImpl implements AiChatMessageService {
         aiMessage.setSessionId(chatId);
         aiMessage.setRole("assistant");
         aiMessage.setContent(aiResponse);
+        aiMessage.setMessageType(needRecommend && recommendedVideos != null && !recommendedVideos.isEmpty()
+                ? "video_recommend" : "text");  // 新增
+        aiMessage.setExtraData(needRecommend && recommendedVideos != null && !recommendedVideos.isEmpty()
+                ? JsonUtils.convertObj2Json(recommendedVideos) : null);  // 新增
         aiMessage.setCreateTime(new Date());
 
         aiChatMessageMapper.insert(aiMessage);
-// ========== 新增: 更新 Redis 上下文 ==========
-// 添加用户消息到上下文
+        // ========== 新增: 更新 Redis 上下文 ==========
+        // 添加用户消息到上下文
         redisComponent.addMessageToContext(chatId,
                 AiMessageDto.builder()
                         .role("user")
@@ -252,14 +310,13 @@ public class AiChatMessageServiceImpl implements AiChatMessageService {
                         .build(),
                 aiConfig.getContextLimit());
 
-// 添加 AI 回复到上下文
+        // 添加 AI 回复到上下文
         redisComponent.addMessageToContext(chatId,
                 AiMessageDto.builder()
                         .role("assistant")
                         .content(aiResponse)
                         .build(),
                 aiConfig.getContextLimit());
-
 
         // ========== 步骤 7: 更新会话时间 ==========
         AiChatSession updateSession = new AiChatSession();
@@ -292,9 +349,8 @@ public class AiChatMessageServiceImpl implements AiChatMessageService {
 
         // ========== 步骤 9: 增加使用次数 ==========
         aiUserConfig.setDailyUsageCount(aiUserConfig.getDailyUsageCount() + 1);
-        aiUserConfig.setLastUsageDate(new Date());  // 更新最后使用日期
+        aiUserConfig.setLastUsageDate(new Date()); // 更新最后使用日期
         aiUserConfigService.updateAiUserConfigByUserId(aiUserConfig, userId);
-
 
         // ========== 步骤 10: 返回结果 ==========
         AiChatResponseDto response = new AiChatResponseDto();
@@ -302,6 +358,15 @@ public class AiChatMessageServiceImpl implements AiChatMessageService {
         response.setContent(aiResponse);
         response.setChatId(chatId);
         response.setTitle(aiChatSession.getTitle());
+
+        // 如果有视频推荐,添加到响应中
+        if (needRecommend && recommendedVideos != null && !recommendedVideos.isEmpty()) {
+            response.setMessageType("video_recommend");
+            response.setExtraData(JsonUtils.convertObj2Json(recommendedVideos));
+            log.info("返回视频推荐,数量: {}", recommendedVideos.size());
+        } else {
+            response.setMessageType("text");
+        }
 
         return response;
     }

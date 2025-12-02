@@ -130,48 +130,38 @@ public class AiChatController extends ABaseController {
         }
     }
 
-    /**
-     * 获取历史消息
-     * 前端调用: GET /ai/chat/history
-     *
-     * @param chatId 会话 ID
-     * @return 消息列表
-     */
     @RequestMapping("/history")
     @GlobalInterceptor(checkLogin = true)
     public ResponseVO getChatHistory(Long chatId) {
         try {
-            // 参数校验
             if (chatId == null) {
                 throw new BusinessException("会话ID不能为空");
             }
 
-            // 获取当前登录用户 ID
             String userId = getTokenUserInfoDto().getUserId();
-
-            // 验证会话归属权
             AiChatSession session = aiChatSessionService.getAiChatSessionBySessionId(chatId);
 
-            if (session == null || !session.getUserId().equals(userId)) {
+            if (session == null) {
+                throw new BusinessException("会话不存在");
+            }
+
+            if (!session.getUserId().equals(userId)) {
                 throw new BusinessException("无权访问该会话");
             }
 
-            // 构建查询条件
             AiChatMessageQuery query = new AiChatMessageQuery();
             query.setSessionId(chatId);
-            query.setOrderBy("create_time asc"); // 按时间正序排列
+            query.setOrderBy("create_time asc");
 
-            // 查询消息列表
             List<AiChatMessage> messages = aiChatMessageService.findListByParam(query);
 
-            log.info("查询会话 {} 的历史消息,共 {} 条", chatId, messages.size());
+            log.info("获取会话 {} 历史消息,数量: {}", chatId, messages.size());
 
-            return getSuccessResponseVO(messages);
+            return getSuccessResponseVO(messages);  // 直接返回消息列表,包含所有字段
         } catch (BusinessException e) {
             return getBusinessErrorResponseVO(e, null);
         }
     }
-
     /**
      * 发送消息
      * 前端调用: POST /ai/chat/send

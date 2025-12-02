@@ -48,6 +48,19 @@ public class AiChatMessage implements Serializable {
 	@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	private Date createTime;
 
+    /**
+     * 消息类型: text-文本消息, video_recommend-视频推荐
+     */
+    private String messageType;
+
+    public void setMessageType(String messageType){
+        this.messageType = messageType;
+    }
+
+    public String getMessageType(){
+        return this.messageType;
+    }
+
 
 	public void setMessageId(Long messageId){
 		this.messageId = messageId;

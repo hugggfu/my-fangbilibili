@@ -266,7 +266,16 @@ public class EsSearchComponent {
                 videoInfoList.add(videoInfo);
 
                 userIdList.add(videoInfo.getUserId());
+
             }
+
+// 新增: 如果没有视频,直接返回空结果
+            if (userIdList.isEmpty()) {
+                SimplePage page = new SimplePage(pageNo, 0, pageSize);
+                PaginationResultVO<VideoInfo> result = new PaginationResultVO(0, page.getPageSize(), page.getPageNo(), page.getPageTotal(), videoInfoList);
+                return result;
+            }
+
             UserInfoQuery userInfoQuery = new UserInfoQuery();
             userInfoQuery.setUserIdList(userIdList);
             List<UserInfo> userInfoList = userInfoMapper.selectList(userInfoQuery);

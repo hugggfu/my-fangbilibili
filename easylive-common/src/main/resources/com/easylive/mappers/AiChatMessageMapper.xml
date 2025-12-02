@@ -17,14 +17,17 @@
 		<result column="extra_data" property="extraData"  />
 		<!--发送时间-->
 		<result column="create_time" property="createTime"  />
+
+        <!--消息类型: text-文本消息, video_recommend-视频推荐-->
+        <result column="message_type" property="messageType"  />
 	</resultMap>
 
 
 	<!-- 通用查询结果列-->
-	<sql id="base_column_list">
-		 a.message_id,a.session_id,a.role,a.content,a.extra_data,
-		 a.create_time
-	</sql>
+    <sql id="base_column_list">
+        a.message_id,a.session_id,a.role,a.content,a.message_type,a.extra_data,
+    a.create_time
+    </sql>
 
 	<sql id="base_condition_filed">
 			<if test="query.messageId != null">
@@ -107,6 +110,9 @@
 			<if test="bean.content != null">
 				 content,
 			</if>
+             <if test="bean.messageType != null">
+                 message_type,
+             </if>
 			<if test="bean.extraData != null">
 				 extra_data,
 			</if>
@@ -124,6 +130,9 @@
 			<if test="bean.content!=null">
 				 #{bean.content},
 			</if>
+             <if test="bean.messageType!=null">
+                 #{bean.messageType},
+             </if>
 			<if test="bean.extraData!=null">
 				 #{bean.extraData},
 			</if>
@@ -197,24 +206,26 @@
 	</insert>
 
 	<!-- 添加 （批量插入）-->
-	<insert id="insertBatch" parameterType="com.easylive.entity.po.AiChatMessage" useGeneratedKeys="true" keyProperty="messageId">
-		 INSERT INTO ai_chat_message(
-			 session_id,
-			 role,
-			 content,
-			 extra_data,
-			 create_time
-		 )values
-		 <foreach collection="list" item="item" separator=",">
-			 (
-				 #{item.sessionId},
-				 #{item.role},
-				 #{item.content},
-				 #{item.extraData},
-				 #{item.createTime}
-			 )
-		 </foreach>
-	</insert>
+    <insert id="insertBatch" parameterType="com.easylive.entity.po.AiChatMessage" useGeneratedKeys="true" keyProperty="messageId">
+        INSERT INTO ai_chat_message(
+        session_id,
+        role,
+        content,
+        message_type,
+        extra_data,
+        create_time
+        )values
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.sessionId},
+            #{item.role},
+            #{item.content},
+            #{item.messageType},
+            #{item.extraData},
+            #{item.createTime}
+            )
+        </foreach>
+    </insert>
 
 	<!-- 批量新增修改 （批量插入）-->
 	<insert id="insertOrUpdateBatch" parameterType="com.easylive.entity.po.AiChatMessage">
