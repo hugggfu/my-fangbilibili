@@ -100,9 +100,7 @@ public class FileServiceImpl implements FileService {
 
         readFile(response, sourceName);
 
-
     }
-
 
     protected void readFile(HttpServletResponse response, String key) {
         String bucketName = ossConfig.getBucketName();
@@ -114,9 +112,8 @@ public class FileServiceImpl implements FileService {
         try {
             OSSObject ossObject = ossClient.getObject(bucketName, key);
 
-
             try (InputStream in = ossObject.getObjectContent();
-                 OutputStream out = response.getOutputStream()) {
+                    OutputStream out = response.getOutputStream()) {
 
                 byte[] buffer = new byte[1024];
                 int len;

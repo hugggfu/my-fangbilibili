@@ -1,11 +1,13 @@
 package com.easylive.service.impl;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
 import javax.annotation.Resource;
 
 import com.easylive.component.EsSearchComponent;
+import com.easylive.entity.config.RabbitMQConfig;
 import com.easylive.entity.enums.ResponseCodeEnum;
 import com.easylive.entity.enums.SearchOrderTypeEnum;
 import com.easylive.entity.enums.UserActionTypeEnum;
@@ -17,6 +19,11 @@ import com.easylive.exception.BusinessException;
 import com.easylive.mappers.UserInfoMapper;
 import com.easylive.mappers.VideoCommentMapper;
 import com.easylive.mappers.VideoInfoMapper;
+import com.rabbitmq.client.Channel;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
 import com.easylive.entity.enums.PageSize;
@@ -35,6 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 
 @Service("userActionService")
+@Slf4j
 public class UserActionServiceImpl implements UserActionService {
 
 	@Resource
@@ -51,6 +59,9 @@ public class UserActionServiceImpl implements UserActionService {
 
     @Resource
     private EsSearchComponent esSearchComponent;
+
+    @Resource
+    RabbitTemplate rabbitTemplate;
 
 	/**
 	 * 根据条件查询列表
@@ -193,28 +204,23 @@ public class UserActionServiceImpl implements UserActionService {
             throw new BusinessException(ResponseCodeEnum.CODE_600);
         }
 
-        UserAction dbAction = userActionMapper.selectByVideoIdAndCommentIdAndActionTypeAndUserId(bean.getVideoId(), bean.getCommentId(), bean.getActionType(),
-                bean.getUserId());
-
-
         bean.setActionTime(new Date());
-        switch (actionTypeEnum) {
-            //点赞,收藏
-            case VIDEO_LIKE:
-            case VIDEO_COLLECT:
-                if (dbAction != null) {
-                    userActionMapper.deleteByActionId(dbAction.getActionId());
-                } else {
-                    userActionMapper.insert(bean);
-                }
-                Integer changeCount = dbAction == null ? 1 : -1;
-                videoInfoMapper.updateCountInfo(bean.getVideoId(), actionTypeEnum.getField(), changeCount);
 
-                if (actionTypeEnum == UserActionTypeEnum.VIDEO_COLLECT) {
-                    //更新es收藏数量
-                    esSearchComponent.updateDocCount(videoInfo.getVideoId(), SearchOrderTypeEnum.VIDEO_COLLECT.getField(), changeCount);
-                }
-                break;
+        // ================== 改造开始 ==================
+        //如果是 点赞 或 收藏，直接发 MQ，然后返回
+        if (UserActionTypeEnum.VIDEO_LIKE == actionTypeEnum || UserActionTypeEnum.VIDEO_COLLECT == actionTypeEnum) {
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConfig.ACTION_EXCHANGE,
+                    RabbitMQConfig.ACTION_ROUTING_KEY,
+                    bean
+            );
+            return; // 🚀 直接返回，后续逻辑交给消费者
+        }
+        // ================== 改造结束 ==================
+        UserAction dbAction = userActionMapper.selectByVideoIdAndCommentIdAndActionTypeAndUserId(bean.getVideoId(), bean.getCommentId(), bean.getActionType(),
+                     bean.getUserId());
+        switch (actionTypeEnum) {
+
             case VIDEO_COIN:
                 if (videoInfo.getUserId().equals(bean.getUserId())) {
                     throw new BusinessException("UP主不能给自己投币");
@@ -251,7 +257,7 @@ public class UserActionServiceImpl implements UserActionService {
                 } else {
                     userActionMapper.insert(bean);
                 }
-                changeCount = dbAction == null ? 1 : -1;
+                Integer changeCount = dbAction == null ? 1 : -1;
                 Integer opposeChangeCount = changeCount * -1;
                 videoCommentMapper.updateCountInfo(bean.getCommentId(),
                         actionTypeEnum.getField(),
@@ -259,6 +265,49 @@ public class UserActionServiceImpl implements UserActionService {
                         opposeAction == null ? null : opposeTypeEnum.getField(),
                         opposeChangeCount);
                 break;
+        }
+    }
+
+    /**
+     * 监听 MQ 队列，处理点赞/收藏的数据库操作
+     */
+    @RabbitListener(queues = RabbitMQConfig.ACTION_QUEUE)
+    @Transactional(rollbackFor = Exception.class)
+    public void consumeAction(UserAction bean, Channel channel, Message message) {
+        long deliveryTag = message.getMessageProperties().getDeliveryTag();
+        try {
+            log.info("消费行为消息: type={}, videoId={}, userId={}", bean.getActionType(), bean.getVideoId(), bean.getUserId());
+
+            UserActionTypeEnum actionTypeEnum = UserActionTypeEnum.getByType(bean.getActionType());
+
+            // 1. 在这里查数据库，判断是新增还是取消 (避免并发问题)
+            UserAction dbAction = userActionMapper.selectByVideoIdAndCommentIdAndActionTypeAndUserId(
+                    bean.getVideoId(), bean.getCommentId(), bean.getActionType(), bean.getUserId());
+            // 2. 执行新增或删除 (Toggle逻辑)
+            if (dbAction != null) {
+                userActionMapper.deleteByActionId(dbAction.getActionId());
+            } else {
+                userActionMapper.insert(bean);
+            }
+            // 3. 更新视频主表计数
+            Integer changeCount = dbAction == null ? 1 : -1;
+            videoInfoMapper.updateCountInfo(bean.getVideoId(), actionTypeEnum.getField(), changeCount);
+            // 4. 更新 ES (如果是收藏)
+            if (actionTypeEnum == UserActionTypeEnum.VIDEO_COLLECT) {
+                esSearchComponent.updateDocCount(bean.getVideoId(), SearchOrderTypeEnum.VIDEO_COLLECT.getField(), changeCount);
+            }
+
+            // 手动确认消息
+            channel.basicAck(deliveryTag, false);
+
+        } catch (Exception e) {
+            log.error("处理点赞收藏消息失败", e);
+            try {
+                // 发生异常，重回队列 (根据业务可以是 false 丢弃)
+                channel.basicNack(deliveryTag, false, false);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
         }
     }
 }

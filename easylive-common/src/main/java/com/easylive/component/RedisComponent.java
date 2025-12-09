@@ -1,5 +1,6 @@
 package com.easylive.component;
 
+import com.alibaba.fastjson.JSON;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
 import com.easylive.entity.config.AppConfig;
@@ -9,9 +10,11 @@ import com.easylive.entity.dto.*;
 import com.easylive.entity.enums.DateTimePatternEnum;
 
 import com.easylive.entity.po.CategoryInfo;
+import com.easylive.entity.po.VideoDanmu;
 import com.easylive.entity.po.VideoInfoFilePost;
 import com.easylive.redis.RedisUtils;
 import com.easylive.utils.DateUtil;
+import com.easylive.utils.JsonUtils;
 import com.easylive.utils.StringTools;
 import org.springframework.stereotype.Component;
 
@@ -33,20 +36,21 @@ public class RedisComponent {
     @Resource
     private OssConfig ossConfig;
 
-    public String                                                                     saveCheckCode(String code){
-        String  checkCodeKey= UUID.randomUUID().toString();
-        redisUtils. setex(Constants.REDIS_KEY_CHECK_CODE+checkCodeKey,code,Constants.REDIS_KEY_EXPIRES_ONE_MIN*10);
+    public String saveCheckCode(String code) {
+        String checkCodeKey = UUID.randomUUID().toString();
+        redisUtils.setex(Constants.REDIS_KEY_CHECK_CODE + checkCodeKey, code, Constants.REDIS_KEY_EXPIRES_ONE_MIN * 10);
         return checkCodeKey;
     }
 
-    public String getCheckCode(String checkCodeKey){
-        return (String) redisUtils.get(Constants.REDIS_KEY_CHECK_CODE+checkCodeKey);
+    public String getCheckCode(String checkCodeKey) {
+        return (String) redisUtils.get(Constants.REDIS_KEY_CHECK_CODE + checkCodeKey);
     }
 
 
-    public void cleanCheckCode(String checkCodeKey){
-        redisUtils.delete(Constants.REDIS_KEY_CHECK_CODE+checkCodeKey);
+    public void cleanCheckCode(String checkCodeKey) {
+        redisUtils.delete(Constants.REDIS_KEY_CHECK_CODE + checkCodeKey);
     }
+
     public void saveTokenInfo(TokenUserInfoDto tokenUserInfoDto) {
         //生成一个token
         String token = UUID.randomUUID().toString();
@@ -55,7 +59,7 @@ public class RedisComponent {
         //设置token
         tokenUserInfoDto.setToken(token);
         //信息保存在redis中，有效期 7天
-        redisUtils.setex(Constants.REDIS_KEY_TOKEN_WEB + token, tokenUserInfoDto,  Constants.REDIS_KEY_EXPIRES_DAY * 7);
+        redisUtils.setex(Constants.REDIS_KEY_TOKEN_WEB + token, tokenUserInfoDto, Constants.REDIS_KEY_EXPIRES_DAY * 7);
     }
 
     public void cleanToken(String token) {
@@ -111,7 +115,7 @@ public class RedisComponent {
 
 
         // 5. OSS 对象 Key
-        String filePath = "video/" + day + "/"  + userId + uploadId;
+        String filePath = "video/" + day + "/" + userId + uploadId;
 
 
         fileDto.setFilePath(filePath);
@@ -155,7 +159,7 @@ public class RedisComponent {
     }
 
     public List<CategoryInfo> getCategoryList() {
-       return (List<CategoryInfo>) redisUtils.get(Constants.REDIS_KEY_CATEGORY_LIST);
+        return (List<CategoryInfo>) redisUtils.get(Constants.REDIS_KEY_CATEGORY_LIST);
     }
 
     public void addFile2DelQueue(String videoId, List<String> fileIdList) {
@@ -172,7 +176,7 @@ public class RedisComponent {
     }
 
     public void cleanDelFileList(String videoId) {
-            redisUtils.delete(Constants.REDIS_KEY_FILE_DEL + videoId);
+        redisUtils.delete(Constants.REDIS_KEY_FILE_DEL + videoId);
 
     }
 
@@ -238,7 +242,7 @@ public class RedisComponent {
      * 保存 AI 对话上下文到 Redis
      *
      * @param sessionId 会话 ID
-     * @param messages 消息列表
+     * @param messages  消息列表
      */
     public void saveAiContext(Long sessionId, List<AiMessageDto> messages) {
         String key = Constants.REDIS_KEY_AI_CONTEXT + sessionId;
@@ -260,8 +264,8 @@ public class RedisComponent {
      * 添加消息到上下文
      * 如果上下文不存在,则创建新的
      *
-     * @param sessionId 会话 ID
-     * @param message 新消息
+     * @param sessionId      会话 ID
+     * @param message        新消息
      * @param maxContextSize 最大上下文数量
      */
     public void addMessageToContext(Long sessionId, AiMessageDto message, Integer maxContextSize) {
@@ -308,5 +312,23 @@ public class RedisComponent {
         redisUtils.expire(key, Constants.REDIS_KEY_AI_CONTEXT_EXPIRE);
     }
 
+
+    public void saveDamu(VideoDanmu videoDanmu) {
+        String key = Constants.REDIS_KEY_DAMU + videoDanmu.getFileId();
+        // 将弹幕对象转为 JSON 字符串存储
+        String danmuJson = JSON.toJSONString(videoDanmu);
+        // 使用 rpush 将弹幕添加到列表尾部
+        // rpush 保证顺序，最新弹幕在后面
+        redisUtils.lpush(key, danmuJson,null);
+        redisUtils.expire(key, Constants.REDIS_KEY_AI_CONTEXT_EXPIRE * 24);
+    }
+
+
+
+
+    public List<String > getDamu(String fileId) {
+        String key = Constants.REDIS_KEY_DAMU + fileId;
+        return redisUtils.lrange(key, 0, -1);
+    }
 
 }

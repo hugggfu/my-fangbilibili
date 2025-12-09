@@ -111,4 +111,5 @@ public class Constants {
      * 1小时内没有新消息,上下文自动清除
      */
     public static final Long REDIS_KEY_AI_CONTEXT_EXPIRE = (long) (REDIS_KEY_EXPIRES_ONE_MIN * 60);
+    public static final String REDIS_KEY_DAMU = REDIS_KEY_PREFIX + "video:damu:";
 }

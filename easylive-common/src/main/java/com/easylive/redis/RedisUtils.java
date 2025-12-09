@@ -194,4 +194,17 @@ public class RedisUtils<V> {
         return list;
     }
 
+    /**
+     * 获取 list 中所有元素
+     */
+    public <T> List<T> lrange(String key, long start, long end) {
+        List<V> list = redisTemplate.opsForList().range(key, start, end);
+        if (list == null) return Collections.emptyList();
+        return (List<T>) list;
+    }
+
+    public void lrem(String key, long count, String value) {
+        redisTemplate.opsForList().remove(key, count, value);
+    }
+
 }

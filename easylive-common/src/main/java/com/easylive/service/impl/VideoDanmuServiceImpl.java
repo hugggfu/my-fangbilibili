@@ -1,10 +1,13 @@
 package com.easylive.service.impl;
 
+import java.io.IOException;
 import java.util.List;
 
 import javax.annotation.Resource;
 
 import com.easylive.component.EsSearchComponent;
+import com.easylive.component.RedisComponent;
+import com.easylive.entity.config.RabbitMQConfig;
 import com.easylive.entity.constants.Constants;
 import com.easylive.entity.enums.ResponseCodeEnum;
 import com.easylive.entity.enums.SearchOrderTypeEnum;
@@ -12,6 +15,11 @@ import com.easylive.entity.enums.UserActionTypeEnum;
 import com.easylive.entity.po.VideoInfo;
 import com.easylive.exception.BusinessException;
 import com.easylive.mappers.VideoInfoMapper;
+import com.rabbitmq.client.Channel;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
 import com.easylive.entity.enums.PageSize;
@@ -23,16 +31,19 @@ import com.easylive.mappers.VideoDanmuMapper;
 import com.easylive.service.VideoDanmuService;
 import com.easylive.utils.StringTools;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 
 /**
  * 视频弹幕 业务接口实现
  */
+@Slf4j
 @Service("videoDanmuService")
 public class VideoDanmuServiceImpl implements VideoDanmuService {
 
-	@Resource
-	private VideoDanmuMapper<VideoDanmu, VideoDanmuQuery> videoDanmuMapper;
+    @Resource
+    private VideoDanmuMapper<VideoDanmu, VideoDanmuQuery> videoDanmuMapper;
 
     @Resource
     private VideoInfoMapper videoInfoMapper;
@@ -40,108 +51,114 @@ public class VideoDanmuServiceImpl implements VideoDanmuService {
     @Resource
     private EsSearchComponent esSearchComponent;
 
-	/**
-	 * 根据条件查询列表
-	 */
-	@Override
-	public List<VideoDanmu> findListByParam(VideoDanmuQuery param) {
-		return this.videoDanmuMapper.selectList(param);
-	}
+    @Resource
+    private RedisComponent redisComponent;
 
-	/**
-	 * 根据条件查询列表
-	 */
-	@Override
-	public Integer findCountByParam(VideoDanmuQuery param) {
-		return this.videoDanmuMapper.selectCount(param);
-	}
+    @Resource
+    private RabbitTemplate rabbitTemplate;
 
-	/**
-	 * 分页查询方法
-	 */
-	@Override
-	public PaginationResultVO<VideoDanmu> findListByPage(VideoDanmuQuery param) {
-		int count = this.findCountByParam(param);
-		int pageSize = param.getPageSize() == null ? PageSize.SIZE15.getSize() : param.getPageSize();
+    /**
+     * 根据条件查询列表
+     */
+    @Override
+    public List<VideoDanmu> findListByParam(VideoDanmuQuery param) {
+        return this.videoDanmuMapper.selectList(param);
+    }
 
-		SimplePage page = new SimplePage(param.getPageNo(), count, pageSize);
-		param.setSimplePage(page);
-		List<VideoDanmu> list = this.findListByParam(param);
-		PaginationResultVO<VideoDanmu> result = new PaginationResultVO(count, page.getPageSize(), page.getPageNo(), page.getPageTotal(), list);
-		return result;
-	}
+    /**
+     * 根据条件查询列表
+     */
+    @Override
+    public Integer findCountByParam(VideoDanmuQuery param) {
+        return this.videoDanmuMapper.selectCount(param);
+    }
 
-	/**
-	 * 新增
-	 */
-	@Override
-	public Integer add(VideoDanmu bean) {
-		return this.videoDanmuMapper.insert(bean);
-	}
+    /**
+     * 分页查询方法
+     */
+    @Override
+    public PaginationResultVO<VideoDanmu> findListByPage(VideoDanmuQuery param) {
+        int count = this.findCountByParam(param);
+        int pageSize = param.getPageSize() == null ? PageSize.SIZE15.getSize() : param.getPageSize();
 
-	/**
-	 * 批量新增
-	 */
-	@Override
-	public Integer addBatch(List<VideoDanmu> listBean) {
-		if (listBean == null || listBean.isEmpty()) {
-			return 0;
-		}
-		return this.videoDanmuMapper.insertBatch(listBean);
-	}
+        SimplePage page = new SimplePage(param.getPageNo(), count, pageSize);
+        param.setSimplePage(page);
+        List<VideoDanmu> list = this.findListByParam(param);
+        PaginationResultVO<VideoDanmu> result = new PaginationResultVO(count, page.getPageSize(), page.getPageNo(), page.getPageTotal(), list);
+        return result;
+    }
 
-	/**
-	 * 批量新增或者修改
-	 */
-	@Override
-	public Integer addOrUpdateBatch(List<VideoDanmu> listBean) {
-		if (listBean == null || listBean.isEmpty()) {
-			return 0;
-		}
-		return this.videoDanmuMapper.insertOrUpdateBatch(listBean);
-	}
+    /**
+     * 新增
+     */
+    @Override
+    public Integer add(VideoDanmu bean) {
+        return this.videoDanmuMapper.insert(bean);
+    }
 
-	/**
-	 * 多条件更新
-	 */
-	@Override
-	public Integer updateByParam(VideoDanmu bean, VideoDanmuQuery param) {
-		StringTools.checkParam(param);
-		return this.videoDanmuMapper.updateByParam(bean, param);
-	}
+    /**
+     * 批量新增
+     */
+    @Override
+    public Integer addBatch(List<VideoDanmu> listBean) {
+        if (listBean == null || listBean.isEmpty()) {
+            return 0;
+        }
+        return this.videoDanmuMapper.insertBatch(listBean);
+    }
 
-	/**
-	 * 多条件删除
-	 */
-	@Override
-	public Integer deleteByParam(VideoDanmuQuery param) {
-		StringTools.checkParam(param);
-		return this.videoDanmuMapper.deleteByParam(param);
-	}
+    /**
+     * 批量新增或者修改
+     */
+    @Override
+    public Integer addOrUpdateBatch(List<VideoDanmu> listBean) {
+        if (listBean == null || listBean.isEmpty()) {
+            return 0;
+        }
+        return this.videoDanmuMapper.insertOrUpdateBatch(listBean);
+    }
 
-	/**
-	 * 根据DanmuId获取对象
-	 */
-	@Override
-	public VideoDanmu getVideoDanmuByDanmuId(Integer danmuId) {
-		return this.videoDanmuMapper.selectByDanmuId(danmuId);
-	}
+    /**
+     * 多条件更新
+     */
+    @Override
+    public Integer updateByParam(VideoDanmu bean, VideoDanmuQuery param) {
+        StringTools.checkParam(param);
+        return this.videoDanmuMapper.updateByParam(bean, param);
+    }
 
-	/**
-	 * 根据DanmuId修改
-	 */
-	@Override
-	public Integer updateVideoDanmuByDanmuId(VideoDanmu bean, Integer danmuId) {
-		return this.videoDanmuMapper.updateByDanmuId(bean, danmuId);
-	}
+    /**
+     * 多条件删除
+     */
+    @Override
+    public Integer deleteByParam(VideoDanmuQuery param) {
+        StringTools.checkParam(param);
+        return this.videoDanmuMapper.deleteByParam(param);
+    }
 
-	/**
-	 * 根据DanmuId删除
-	 */
-	@Override
-	public Integer deleteVideoDanmuByDanmuId(Integer danmuId) {
-		return this.videoDanmuMapper.deleteByDanmuId(danmuId);
-	}
+    /**
+     * 根据DanmuId获取对象
+     */
+    @Override
+    public VideoDanmu getVideoDanmuByDanmuId(Integer danmuId) {
+        return this.videoDanmuMapper.selectByDanmuId(danmuId);
+    }
+
+    /**
+     * 根据DanmuId修改
+     */
+    @Override
+    public Integer updateVideoDanmuByDanmuId(VideoDanmu bean, Integer danmuId) {
+        return this.videoDanmuMapper.updateByDanmuId(bean, danmuId);
+    }
+
+    /**
+     * 根据DanmuId删除
+     */
+    @Override
+    public Integer deleteVideoDanmuByDanmuId(Integer danmuId) {
+        return this.videoDanmuMapper.deleteByDanmuId(danmuId);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -154,11 +171,25 @@ public class VideoDanmuServiceImpl implements VideoDanmuService {
         if (videoInfo.getInteraction() != null && videoInfo.getInteraction().contains(Constants.ONE.toString())) {
             throw new BusinessException("UP主已关闭弹幕");
         }
+
+        // 1. MySQL操作（事务保护）
         this.videoDanmuMapper.insert(videoDanmu);
         this.videoInfoMapper.updateCountInfo(videoInfo.getVideoId(), UserActionTypeEnum.VIDEO_DANMU.getField(), 1);
-        //更新es弹幕数量
 
-        esSearchComponent.updateDocCount(videoDanmu.getVideoId(), SearchOrderTypeEnum.VIDEO_DANMU.getField(), 1);
+
+        // 2. 注册事务提交后的回调
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        rabbitTemplate.convertAndSend(
+                                RabbitMQConfig.DANMU_EXCHANGE,
+                                RabbitMQConfig.DANMU_ROUTING_KEY,
+                                videoDanmu
+                        );
+                    }
+                }
+        );
     }
 
     @Override
@@ -178,4 +209,28 @@ public class VideoDanmuServiceImpl implements VideoDanmuService {
         videoDanmuMapper.deleteByDanmuId(danmuId);
 
     }
+
+
+    /**
+     * 新增: 监听MQ消息
+     */
+    @RabbitListener(queues = RabbitMQConfig.DANMU_QUEUE)
+    public void handleDanmuFromMQ(VideoDanmu videoDanmu,
+                                  Channel channel,
+                                  Message message) throws IOException {
+        long deliveryTag = message.getMessageProperties().getDeliveryTag();
+        try {
+
+            redisComponent.saveDamu(videoDanmu);
+
+            esSearchComponent.updateDocCount(videoDanmu.getVideoId(), SearchOrderTypeEnum.VIDEO_DANMU.getField(), 1);
+
+            // 手动ACK
+            channel.basicAck(deliveryTag, false);
+
+        } catch (Exception e) {
+            channel.basicNack(deliveryTag, false, true);
+        }
+    }
 }
+
